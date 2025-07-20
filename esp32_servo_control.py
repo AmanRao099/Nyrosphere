@@ -175,7 +175,7 @@ def main():
             continue
 
         # Fallback to text-based QA
-        context = "Narendra Modi is the current Prime Minister of India. Apple is a fruit. Blue is a color."
+        context = " Apple is a fruit. Blue is a color."
         try:
             result = qa_pipeline(question=command, context=context)
             speak(result['answer'])
