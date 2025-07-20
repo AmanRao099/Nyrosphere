@@ -1,0 +1,72 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ESP32Servo.h>
+
+const char* ssid = "Esp32";         // <-- Make sure this matches your phone/hotspot/router name
+const char* password = "123456789"; // <-- Double check this too
+
+WebServer server(80);
+Servo myservo;
+
+// Use safe GPIOs
+const int ledPin = 5;    // LED on GPIO4
+const int servoPin = 18; // Servo on GPIO18
+
+bool wifiConnected = false;
+unsigned long lastBlink = 0;
+bool ledState = false;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+    if (attempts > 20) {
+      Serial.println("\n❌ Failed to connect to WiFi");
+      return;
+    }
+  }
+
+  Serial.println("\n✅ Connected to WiFi");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  wifiConnected = true;
+
+  myservo.setPeriodHertz(50);
+  myservo.attach(servoPin, 500, 2400);
+
+  server.on("/servo", HTTP_POST, []() {
+    String body = server.arg("plain");
+    int angle = body.toInt();
+    angle = constrain(angle, 0, 180);
+    myservo.write(angle);
+    server.send(200, "text/plain", "Moved to " + String(angle));
+  });
+
+  server.begin();
+  Serial.println("🌐 Server started");
+}
+
+void loop() {
+  server.handleClient();
+
+  // Blink LED when connected
+  if (wifiConnected) {
+    if (millis() - lastBlink >= 500) {
+      lastBlink = millis();
+      ledState = !ledState;
+      digitalWrite(ledPin, ledState);
+    }
+  }
+}
